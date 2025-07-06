@@ -15,14 +15,16 @@ public enum ErrorLevel: Int, Codable {
 
 // Ответ для вызова API
 
-public struct responseAPI {
+public struct ResponseAPI<T: Codable>: Codable {
     public let success: Bool
-    public let message: String?
+    public let message: String
     public let errorType: ErrorLevel?
+    public let payload: T?
     
-    public init(success: Bool, message: String?, errorType: ErrorLevel = .none) {
+    public init(success: Bool, message: String, errorType: ErrorLevel = .none, payload: T? = nil) {
         self.success = success
         self.message = message
         self.errorType = errorType
+        self.payload = payload
     }
 }
