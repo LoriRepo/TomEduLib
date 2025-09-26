@@ -15,6 +15,12 @@ public final class TomEduLib {
     private init() {}
     
     @MainActor
+    public func getVersion() async -> VersionInfo {
+        let result = await GetVersionRequest.shared.getRemoteVersion()
+        return result
+    }
+    
+    @MainActor
     public func login(username: String, password: String) async -> ResponseAPI<AuthSummary> {
         let result = await LoginRequest.shared.Auth(username: username, password: password)
         
