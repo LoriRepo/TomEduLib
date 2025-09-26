@@ -40,6 +40,7 @@ internal class LoginRequest {
         }
         
         do {
+            try await Task.sleep(for: .seconds(3))
             let loginData = LoginData(login: username, password: hashAndBase64Encode(password), isRemember: true)
             let jsonData = try JSONEncoder().encode(loginData)
             var request = URLRequest(url: url)
@@ -56,6 +57,12 @@ internal class LoginRequest {
             }
             
             let decoder = JSONDecoder()
+            var messageToPrint = "Нет данных"
+            if let dataString = String(data: data, encoding: .utf8) {
+                messageToPrint = dataString
+            }
+            
+            print("HTTP Status Code: \(httpResponse.statusCode), Message: \(messageToPrint)")
             
             switch httpResponse.statusCode {
                 case 200:
@@ -66,24 +73,35 @@ internal class LoginRequest {
                             return ResponseAPI(success: false, message: "Ошибка декодирования", errorType: .fatal)
                         }
                         else {
-                            return ResponseAPI(success: true, message: "Авторизовано", payload: summary)
+                            let AuthUserName = "\(summary.lastName) \(String(summary.firstName).first ?? " ").\(String(summary.middleName).first ?? " ")."
+                            return ResponseAPI(success: true, message: "Авторизовано \(AuthUserName)", payload: summary)
                         }
                 }
                 else {
                     return ResponseAPI(success: false, message: "Ошибка декодирования", errorType: .fatal)
                 }
                 
-                case 400, 401:
+                case 401:
                     let errorResponse = try decoder.decode(ErrorResponse.self, from: data)
                     return ResponseAPI(success: false, message: errorResponse.responseStatus.message, errorType: .warning)
+                
+                case 400:
+                    return ResponseAPI(success: false, message: "Логин или пароль не могут быть пустыми", errorType: .warning)
                 
                 default:
                     return ResponseAPI(success: false, message: "Ошибка чтения данных", errorType: .warning)
             }
             
         } catch {
-            if (error as? URLError)?.code == .timedOut {
-                return ResponseAPI(success: false, message: "Время ожидания ответа истекло. Возможно включен VPN", errorType: .warning)
+            if let urlError = error as? URLError {
+                switch urlError.code {
+                case .notConnectedToInternet:
+                    return ResponseAPI(success: false, message: "Нет подключения к интернету", errorType: .fatal)
+                case .timedOut:
+                    return ResponseAPI(success: false, message: "Время ожидания ответа истекло. Возможно включен VPN", errorType: .warning)
+                default:
+                    return ResponseAPI(success: false, message: "Ошибка сети: \(urlError.localizedDescription)", errorType: .fatal)
+                }
             }
             return ResponseAPI(success: false, message: "Ошибка выполнения запроса: \(error.localizedDescription)", errorType: .fatal)
         }
